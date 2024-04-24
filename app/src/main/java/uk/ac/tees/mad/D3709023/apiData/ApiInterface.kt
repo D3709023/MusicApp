@@ -1,6 +1,7 @@
 package uk.ac.tees.mad.D3709023.apiData
 
 import retrofit2.Call
+import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.Query
@@ -11,7 +12,7 @@ interface ApiInterface {
         "X-RapidAPI-Host: deezerdevs-deezer.p.rapidapi.com"
     )
 
-    @GET("search")
-     suspend fun getData(@Query("q") query: String): Call<List<MyData>>
-     suspend fun getMusicData():Album
+    @GET("/search")
+     suspend fun getData(@Query("q") query: String): Response<MyData>
+//     suspend fun getMusicData():Album
 }

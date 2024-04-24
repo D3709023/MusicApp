@@ -100,4 +100,13 @@ dependencies {
     //coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+
+    dependencies {
+        implementation("androidx.compose.ui:ui:1.6.5")
+        implementation("androidx.compose.runtime:runtime-livedata:1.6.5")
+        // Other Jetpack Compose dependencies as needed
+
+        implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.4.0") // For LiveData support
+    }
+
 }

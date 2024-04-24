@@ -12,44 +12,30 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,26 +45,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberImagePainter
-import com.example.musicplayer.R
 import com.google.android.gms.auth.api.identity.Identity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import uk.ac.tees.mad.D3709023.apiData.ApiInterface
+import uk.ac.tees.mad.D3709023.apiData.Album
+import uk.ac.tees.mad.D3709023.apiData.Data
 import uk.ac.tees.mad.D3709023.apiData.MyData
 import uk.ac.tees.mad.D3709023.profile.ProfileScreen
 import uk.ac.tees.mad.D3709023.sign_in.GoogleAuthUIClient
 import uk.ac.tees.mad.D3709023.sign_in.SignInScreen
 import uk.ac.tees.mad.D3709023.sign_in.SignInViewModel
 import uk.ac.tees.mad.D3709023.ui.theme.MusicPlayerTheme
+
 
 class MainActivity : ComponentActivity() {
 
@@ -128,6 +105,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            val musicViewModel: MusicViewModel = viewModel()
+
             MusicPlayerTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
@@ -137,38 +116,46 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     NavHost(navController = navController, startDestination = "sign_in") {
                         composable("sign_in") {
+                            // Sign-in logic, navigates to "music_display" on success
                             val viewModel = viewModel<SignInViewModel>()
                             val state by viewModel.state.collectAsStateWithLifecycle()
 
+
                             LaunchedEffect(key1 = Unit) {
                                 if (googleAuthUIClient.getSignedInUser() != null) {
-                                    navController.navigate("profile")
+                                    navController.navigate("music_display")
                                 }
                             }
 
                             val launcher = rememberLauncherForActivityResult(
                                 contract = ActivityResultContracts.StartIntentSenderForResult(),
 
+
                                 onResult = { result ->
                                     if (result.resultCode == RESULT_OK) {
                                         lifecycleScope.launch {
-                                            val signInResult = googleAuthUIClient.signInWithIntent(
-                                                intent = result.data ?: return@launch
-                                            )
+                                            val signInResult =
+                                                googleAuthUIClient.signInWithIntent(
+                                                    intent = result.data ?: return@launch
+                                                )
                                             viewModel.onSignInResult(signInResult)
                                         }
                                     }
                                 }
                             )
+
                             LaunchedEffect(key1 = state.isSignInSuccessful) {
                                 if (state.isSignInSuccessful) {
                                     Toast.makeText(
                                         applicationContext,
-                                        "Sign In Successfull",
+                                        "Sign In Successfully",
                                         Toast.LENGTH_LONG
                                     ).show()
-
-                                    navController.navigate("profile")
+                                    navController.navigate("profile") {
+                                        popUpTo("sign_in") {
+                                            inclusive = true
+                                        }  // Clear backstack up to sign-in
+                                    }
                                     viewModel.resetState()
                                 }
                             }
@@ -185,8 +172,10 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             )
+
                         }
                         composable("profile") {
+                            // Profile display logic
                             ProfileScreen(userData = googleAuthUIClient.getSignedInUser(),
                                 onSignOut = {
                                     lifecycleScope.launch {
@@ -200,91 +189,130 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             )
+                            navController.navigate("music_display")
+                        }
+                        composable("music_display") {
+                            // Music data display logic
+                            MusicDisplayScreen(musicViewModel)
+
                         }
                     }
                 }
-//                val retrofitBuilder = Retrofit.Builder()
-//                    .baseUrl("https://deezerdevs-deezer.p.rapidapi.com/")
-//                    .addConverterFactory(GsonConverterFactory.create())
-//                    .build()
-//                    .create(ApiInterface::class.java)
             }
         }
     }
 }
+
+
 @Composable
-fun MusicPlayerUI(
-    musicName: String = "Music Name",
-    isPlaying: Boolean = false,
-    onPlayClicked: () -> Unit = {},
-    onPauseClicked: () -> Unit = {}
-) {
+fun Box(music: MyData?, isLoading: Boolean, error: Exception?) {
 
-    Row(
-        modifier = Modifier
-            .background(Color(0xFFEDE7F6), RoundedCornerShape(16.dp))
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Icon(
-            imageVector = Icons.Default.AccountCircle,
-            contentDescription = "Music Icon",
-            modifier = Modifier
-                .size(48.dp)
-                .padding(8.dp)
-                .background(Color(0xFFF44336), shape = RoundedCornerShape(50)),
-            tint = Color.White
-        )
-
-        Column(horizontalAlignment = Alignment.Start) {
-            Text(
-                text = musicName,
-                style = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row {
-                Button(
-                    onClick = { onPlayClicked() },
-                   // colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF673AB7)),
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text("Play", color = Color.White)
-                }
-
-                Button(
-                    onClick = { onPauseClicked() },
-//                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF673AB7))
-                ) {
-                    Text("Pause", color = Color.White)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(8.dp)
+        ) {
+            music?.let { MyData ->
+                MyData.data.firstOrNull()?.let { firstData ->
+                    firstData.album?.let { album ->
+                        Image(
+                            painter = rememberImagePainter(album.cover),
+                            contentDescription = firstData.title,
+                            modifier = Modifier.size(80.dp)
+                        )
+                        itemDescription(firstData.title)
+                    }
+                    if (isLoading) {
+                        // Show loading indicator
+                        CircularProgressIndicator(modifier = Modifier.size(40.dp))
+                    } else if (error != null) {
+                        // Show error message
+                        Text("Error: ${error.message}", modifier = Modifier.padding(start = 16.dp))
+                    }
                 }
             }
         }
     }
 }
+
+@Composable
+private fun itemDescription(title: String) {
+    Column(
+        modifier = Modifier.padding(start = 16.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row {
+            Button(
+                onClick = { },
+                modifier = Modifier
+                    .padding(2.dp)
+                    .fillMaxWidth()
+                    .weight(1F),
+            ) {
+                Text(text = "Play")
+            }
+            Button(
+                onClick = { /*TODO*/ },
+                modifier = Modifier
+                    .padding(2.dp)
+                    .fillMaxWidth()
+                    .weight(1F)
+            ) {
+                Text(text = "Pause")
+            }
+        }
+    }
+}
+
+@Composable
+fun MusicDisplayScreen(musicViewModel: MusicViewModel) {
+    LaunchedEffect(true) {
+        musicViewModel.fetchMusic()
+    }
+
+    val music by musicViewModel.music.observeAsState()
+    val isLoading by musicViewModel.isLoading.observeAsState()
+    val error by musicViewModel.error.observeAsState()
+
+//    Box(music, isLoading = isLoading == true, error = error)
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        music?.data?.forEach { data ->
+            item {
+                Box(
+                    music = MyData(data = listOf(data), next = "", total = 1),
+                    isLoading = isLoading == true,
+                    error = error
+                )
+            }
+        }
+    }
+}
+
 
 @Preview
 @Composable
-fun MusicPlayerUIPreview() {
-    MusicPlayerUI()
+fun BoxPreview() {
+    val music = MyData(
+        data = listOf(
+            Data(
+                album = Album("cover_image_url"),
+                title = "Sample Music Title"
+            )
+        ),
+        next = "",
+        total = 1
+    )
+    Box(music = music, isLoading = false, error = null)
 }
 
-
-
-//@Composable
-//fun Greeting(name: String, modifier: Modifier = Modifier) {
-//    Text(
-//        text = "Hello $name!",
-//        modifier = modifier
-//    )
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun GreetingPreview() {
-//    MusicPlayerTheme {
-//        Greeting("Android")
-//    }
-//}
 
