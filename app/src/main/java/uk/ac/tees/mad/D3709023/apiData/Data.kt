@@ -10,7 +10,7 @@ data class Data(
 //    val id: Long,
 //    val link: String,
 //    val md5_image: String,
-//    val preview: String,
+    val preview: String,
 //    val rank: Int,
 //    val readable: Boolean,
     val title: String,

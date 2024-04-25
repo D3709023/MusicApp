@@ -8,7 +8,7 @@ data class Album(
 //    val cover_xl: String,
 //    val id: Int,
 //    val md5_image: String,
-//    val title: String,
+    val title: String,
 //    val tracklist: String,
 //    val type: String
 )

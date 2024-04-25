@@ -1,5 +1,7 @@
 package uk.ac.tees.mad.D3709023
 
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,6 +34,8 @@ class MusicViewModel : ViewModel() {
     private val _error = MutableLiveData<Exception?>()
     val error: LiveData<Exception?> = _error
 
+    private var mediaPlayer: MediaPlayer? = null
+
     fun fetchMusic() {
         _isLoading.value = true
         viewModelScope.launch {
@@ -50,22 +54,40 @@ class MusicViewModel : ViewModel() {
             }
         }
     }
-}
 
-@Composable
-fun Box() {
-    val musicViewModel: MusicViewModel = viewModel()
-    val music by musicViewModel.music.observeAsState()
-    val isLoading by musicViewModel.isLoading.observeAsState()
-    val error by musicViewModel.error.observeAsState()
-
-    LaunchedEffect(true) {
-        musicViewModel.fetchMusic()
+    fun initAndPlayMusic(url: String) {
+        mediaPlayer?.release()  // Release any previously playing player
+        mediaPlayer = MediaPlayer().apply {
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .build()
+            )
+            setDataSource(url)
+            prepareAsync()
+            setOnPreparedListener {
+                start()  // Play automatically upon preparation
+            }
+            setOnErrorListener { _, what, _ ->
+                // Log or handle error
+                false
+            }
+        }
     }
 
-    Box(
-        music = music,
-        isLoading = isLoading ?: false,
-        error = error
-    )
+//    fun playMusic() {
+//        mediaPlayer?.start()
+//    }
+
+    fun pauseMusic() {
+        mediaPlayer?.pause()
+    }
+
+    override fun onCleared() {
+        mediaPlayer?.release()
+        mediaPlayer = null
+        super.onCleared()
+    }
 }
+

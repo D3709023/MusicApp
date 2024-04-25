@@ -31,6 +31,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -205,7 +207,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun Box(music: MyData?, isLoading: Boolean, error: Exception?) {
+fun Box(music: MyData?, musicViewModel: MusicViewModel) {
 
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -222,14 +224,7 @@ fun Box(music: MyData?, isLoading: Boolean, error: Exception?) {
                             contentDescription = firstData.title,
                             modifier = Modifier.size(80.dp)
                         )
-                        itemDescription(firstData.title)
-                    }
-                    if (isLoading) {
-                        // Show loading indicator
-                        CircularProgressIndicator(modifier = Modifier.size(40.dp))
-                    } else if (error != null) {
-                        // Show error message
-                        Text("Error: ${error.message}", modifier = Modifier.padding(start = 16.dp))
+                        itemDescription(firstData, viewModel = MusicViewModel())
                     }
                 }
             }
@@ -238,50 +233,56 @@ fun Box(music: MyData?, isLoading: Boolean, error: Exception?) {
 }
 
 @Composable
-private fun itemDescription(title: String) {
+fun itemDescription(data: Data, viewModel: MusicViewModel) {
     Column(
-        modifier = Modifier.padding(start = 16.dp)
+        modifier = Modifier.padding(16.dp)
     ) {
         Text(
-            text = title,
+            text = data.title,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.fillMaxWidth()
+                .padding(start = 2.dp)
         )
-        Row {
+        Row(horizontalArrangement = Arrangement.SpaceBetween) {
             Button(
-                onClick = { },
+                onClick = { viewModel.initAndPlayMusic(data.preview) },
+
                 modifier = Modifier
                     .padding(2.dp)
                     .fillMaxWidth()
-                    .weight(1F),
+                    .weight(1F)
+
+
             ) {
-                Text(text = "Play")
+                Text("Play")
             }
             Button(
-                onClick = { /*TODO*/ },
+                onClick = { viewModel.pauseMusic() },
                 modifier = Modifier
                     .padding(2.dp)
                     .fillMaxWidth()
                     .weight(1F)
             ) {
-                Text(text = "Pause")
+                Text("Pause")
             }
         }
     }
 }
 
+
 @Composable
 fun MusicDisplayScreen(musicViewModel: MusicViewModel) {
+    val music by musicViewModel.music.observeAsState()
+
+    val musicData = remember { mutableStateOf(listOf<Data>()) }
+    val isLoading = remember { mutableStateOf(true) }
+
     LaunchedEffect(true) {
         musicViewModel.fetchMusic()
+        isLoading.value = false
     }
 
-    val music by musicViewModel.music.observeAsState()
-    val isLoading by musicViewModel.isLoading.observeAsState()
-    val error by musicViewModel.error.observeAsState()
-
-//    Box(music, isLoading = isLoading == true, error = error)
     LazyColumn(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -290,8 +291,7 @@ fun MusicDisplayScreen(musicViewModel: MusicViewModel) {
             item {
                 Box(
                     music = MyData(data = listOf(data), next = "", total = 1),
-                    isLoading = isLoading == true,
-                    error = error
+                    musicViewModel = musicViewModel
                 )
             }
         }
@@ -305,14 +305,19 @@ fun BoxPreview() {
     val music = MyData(
         data = listOf(
             Data(
-                album = Album("cover_image_url"),
-                title = "Sample Music Title"
+                album = Album("cover_image_url", "sample title"),
+                title = "Music Title",
+                preview = "http://sampleurl.com/sample.mp3" // Replace with actual preview URL
             )
         ),
         next = "",
         total = 1
     )
-    Box(music = music, isLoading = false, error = null)
+
+    MusicPlayerTheme {
+        Box(music = music, musicViewModel = MusicViewModel())
+    }
 }
+
 
 

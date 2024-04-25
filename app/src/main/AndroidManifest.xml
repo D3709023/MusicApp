@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools" >
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application
         android:allowBackup="true"
@@ -14,11 +15,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.App.Starting"
         tools:targetApi="31" >
-        <activity
-            android:name="uk.ac.tees.mad.D3709023.HomeActivity"
-            android:exported="false"
-            android:label="@string/title_activity_home"
-            android:theme="@style/Theme.App.Starting.NoActionBar" />
+
         <activity
             android:name="uk.ac.tees.mad.D3709023.MainActivity"
             android:exported="true"
