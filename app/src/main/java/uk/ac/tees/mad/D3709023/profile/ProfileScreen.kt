@@ -19,13 +19,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import org.jetbrains.annotations.Async
 import uk.ac.tees.mad.D3709023.sign_in.UserData
 
 @Composable
 fun ProfileScreen(
     userData: UserData?,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    padding: Modifier
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
