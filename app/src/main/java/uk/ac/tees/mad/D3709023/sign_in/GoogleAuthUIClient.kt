@@ -3,7 +3,6 @@ package uk.ac.tees.mad.D3709023.sign_in
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
-import com.example.musicplayer.R
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.BeginSignInRequest.GoogleIdTokenRequestOptions
 import com.google.android.gms.auth.api.identity.SignInClient
@@ -11,6 +10,7 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
+import uk.ac.tees.mad.D3709023.R
 import java.util.concurrent.CancellationException
 
 class GoogleAuthUIClient(

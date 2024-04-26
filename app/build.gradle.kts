@@ -3,15 +3,14 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinAndroid)
     id("kotlin-kapt")
     id("com.google.gms.google-services")
-//    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.musicplayer"
+    namespace = "uk.ac.tees.mad.D3709023"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.musicplayer"
+        applicationId = "uk.ac.tees.mad.D3709023"
         minSdk = 28
         targetSdk = 34
         versionCode = 1
@@ -70,6 +69,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation(libs.firebase.storage)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -78,7 +78,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation("androidx.core:core-splashscreen:1.0.1")
+//    implementation("androidx.core:core-splashscreen:1.0.1")
 
     implementation ("com.google.firebase:firebase-auth-ktx:22.3.1")
     implementation ("com.google.android.gms:play-services-auth:21.0.0")
@@ -88,7 +88,7 @@ dependencies {
     implementation ("androidx.navigation:navigation-compose:2.7.7")
     implementation ("io.coil-kt:coil-compose:2.2.2")
 
-    implementation("androidx.core:core-splashscreen:1.0.1")
+//    implementation("androidx.core:core-splashscreen:1.0.1")
 
     //retrofit
     implementation ("com.squareup.retrofit2:retrofit:2.9.0")
@@ -109,6 +109,9 @@ dependencies {
         // Other Jetpack Compose dependencies as needed
 
         implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.4.0") // For LiveData support
+
+
+        
     }
 
 }

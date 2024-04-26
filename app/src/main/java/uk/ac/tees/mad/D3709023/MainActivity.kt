@@ -1,9 +1,7 @@
 package uk.ac.tees.mad.D3709023
 
-import android.animation.ObjectAnimator
+import android.net.Uri
 import android.os.Bundle
-import android.view.View
-import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,17 +18,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,14 +38,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.animation.doOnEnd
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+//import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -62,10 +53,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberImagePainter
 import com.google.android.gms.auth.api.identity.Identity
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
-import uk.ac.tees.mad.D3709023.apiData.Data
-import uk.ac.tees.mad.D3709023.apiData.MyData
 import uk.ac.tees.mad.D3709023.profile.ProfileScreen
 import uk.ac.tees.mad.D3709023.sign_in.GoogleAuthUIClient
 import uk.ac.tees.mad.D3709023.sign_in.SignInScreen
@@ -87,38 +75,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        installSplashScreen().apply {
-            setKeepOnScreenCondition {
-                !viewModel.isReady.value
-            }
-
-            setOnExitAnimationListener { screen ->
-                val zoomX = ObjectAnimator.ofFloat(
-                    screen.iconView,
-                    View.SCALE_X,
-                    0.4f,
-                    0.0f
-                )
-                zoomX.interpolator = OvershootInterpolator()
-                zoomX.duration = 500L
-                zoomX.doOnEnd { screen.remove() }
-
-                val zoomY = ObjectAnimator.ofFloat(
-                    screen.iconView,
-                    View.SCALE_Y,
-                    0.4f,
-                    0.0f
-                )
-                zoomY.interpolator = OvershootInterpolator()
-                zoomY.duration = 500L
-                zoomY.doOnEnd { screen.remove() }
-                zoomX.start()
-                zoomY.start()
-
-
-            }
-
-        }
 
         setContent {
 
@@ -131,10 +87,9 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+
                     Scaffold(
                         topBar = {
-//                            when (navController.currentDestination?.route) {
-//                                "music_display" ->
                             TopNavigationBar(navController) {
                                 // Callback for sign out click
                                 lifecycleScope.launch {
@@ -146,13 +101,10 @@ class MainActivity : ComponentActivity() {
                                     ).show()
                                     navController.popBackStack("sign_in", inclusive = true)
                                 }
-//                                }
-//                                else -> Unit // No top bar for other destinations
                             }
                         }
-                    ) { paddingValues ->
+                    ) {PaddingValues->
                         Column(modifier = Modifier.padding(top = 56.dp)) {
-                            val navController = rememberNavController()
                             NavHost(
                                 navController = navController,
                                 startDestination = "sign_in",
@@ -195,9 +147,6 @@ class MainActivity : ComponentActivity() {
                                                 Toast.LENGTH_LONG
                                             ).show()
                                             navController.navigate("music_display") {
-//                                                popUpTo("sign_in") {
-//                                                    inclusive = true
-//                                                }  // Clear backstack up to sign-in
                                             }
                                             viewModel.resetState()
                                         }
@@ -220,6 +169,7 @@ class MainActivity : ComponentActivity() {
                                 composable("profile") {
                                     // Profile display logic
                                     ProfileScreen(
+
                                         userData = googleAuthUIClient.getSignedInUser(),
                                         onSignOut = {
                                             lifecycleScope.launch {
@@ -230,12 +180,12 @@ class MainActivity : ComponentActivity() {
                                                     Toast.LENGTH_LONG
                                                 ).show()
 
-                                                navController.popBackStack()
+//                                                navController.popBackStack()
                                                 navController.navigate("sign_in")
                                             }
-                                        }, Modifier.padding(paddingValues)
+                                        }, updateProfilePicture = {},
+                                        PaddingValues
                                     )
-//                                    navController.navigate("music_display")
                                 }
                                 composable("music_display") {
                                     // Music data display logic
@@ -325,7 +275,6 @@ fun MusicDisplayScreen(musicViewModel: MusicViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopNavigationBar(navController: NavController, onSignOutClick: () -> Unit) {
-//    var expanded by remember { mutableStateOf(false) }
 
     TopAppBar(
         title = { Text(text = "Music Player") },
@@ -333,23 +282,6 @@ fun TopNavigationBar(navController: NavController, onSignOutClick: () -> Unit) {
             IconButton(onClick = { navController.navigate("profile") }) {
                 Icon(Icons.Filled.AccountCircle, contentDescription = "Menu")
             }
-        },
-        actions = {
-            IconButton(onClick = { onSignOutClick() }) {
-                Icon(Icons.Filled.ExitToApp, contentDescription = "Logout")
-            }
-        // Profile Icon
-//            IconButton(onClick = {
-//                navController.navigate("profile") {
-//                    popUpTo("music_display") {
-//                        inclusive = true
-//                    }
-//                }
-//            }) {
-//                Icon(Icons.Filled.MoreVert, contentDescription = "Profile")
-//            }
-            // Logout Icon
-
         }
     )
 }
