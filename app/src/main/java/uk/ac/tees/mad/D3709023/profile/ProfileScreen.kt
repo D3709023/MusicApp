@@ -146,35 +146,36 @@ fun stopLocationUpdate() {
 
 @SuppressLint("MissingPermission")
 fun locationUpdate() {
-    locationCallback.let {
-        //An encapsulation of various parameters for requesting
-        // location through FusedLocationProviderClient.
-        val locationRequest: LocationRequest =
-            LocationRequest.create().apply {
-                interval = TimeUnit.SECONDS.toMillis(60)
-                fastestInterval = TimeUnit.SECONDS.toMillis(30)
-                maxWaitTime = TimeUnit.MINUTES.toMillis(2)
-                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+    CoroutineScope(Dispatchers.IO).launch {
+        locationProvider.lastLocation.addOnSuccessListener { location ->
+            location?.let {
+                Log.d("LOCATION_TAG", "last known location: ${location.longitude}")
             }
-        //use FusedLocationProviderClient to request location update
-//        locationProvider.requestLocationUpdates(
-//            locationRequest,
-//            it,
-//            Looper.getMainLooper()
-//        )
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                locationProvider.requestLocationUpdates(
-                    locationRequest,
-                    locationCallback,
-                    Looper.getMainLooper()
-                ).await()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        }.addOnFailureListener {
+            Log.e("LOCATION_TAG", "Failed to fetch last location: ${it.message}")
         }
     }
 
+    val locationRequest: LocationRequest = LocationRequest.create().apply {
+        interval = TimeUnit.SECONDS.toMillis(10)
+        fastestInterval = TimeUnit.SECONDS.toMillis(5)
+        maxWaitTime = TimeUnit.MINUTES.toMillis(1)
+        priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+    }
+
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            locationProvider.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            ).await()
+            Log.d("LOCATION_TAG", "Location updates started.")
+        } catch (e: Exception) {
+            Log.e("LOCATION_TAG", "Exception setting up location updates: ${e.message}")
+            e.printStackTrace()
+        }
+    }
 }
 
 data class LatandLong(
@@ -214,6 +215,42 @@ fun saveUserLocation(context: Context, userLocation: LatandLong) {
     editor.apply()
 }
 
+fun uploadImageToFirebase(
+    imageUri: Uri,
+    userId: String,
+    updateProfilePicture: (String) -> Unit,
+    context: Context,
+    onUploadSuccess: (Any?) -> Unit,
+    onUploadFailure: () -> Unit
+) {
+    val storageRef = FirebaseStorage.getInstance().reference.child("profileImages/$userId.jpg")
+    storageRef.putFile(imageUri).addOnSuccessListener { uploadTask ->
+        storageRef.downloadUrl.addOnSuccessListener { uri ->
+            val imageUrl = uri.toString()
+            updateProfilePicture(imageUrl)
+        }
+    }.addOnFailureListener {
+        Toast.makeText(context, "Upload failed", Toast.LENGTH_SHORT).show()
+    }
+
+}
+
+suspend fun retrieveImageFromFirebase(imageUrl: Any?): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val storage = FirebaseStorage.getInstance()
+            val imageRef = storage.getReferenceFromUrl(imageUrl.toString())
+            val localFile = File.createTempFile("temp_image", "jpg")
+            imageRef.getFile(localFile).await()
+            localFile.readBytes()
+            imageRef.downloadUrl.await().toString()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+}
 
 @Composable
 fun ProfileScreen(
@@ -225,8 +262,18 @@ fun ProfileScreen(
     context: Context
 ) {
     var imageUri by rememberSaveable {
-        mutableStateOf<String?>(null)
+        mutableStateOf(userData?.profilePictureUrl)
     }
+
+    var imageByteArray by rememberSaveable {
+        mutableStateOf<ByteArray?>(null)
+    }
+    LaunchedEffect(Unit) {
+//        imageByteArray = retrieveImageFromFirebase(imageUri)
+        imageUri = retrieveImageFromFirebase(imageUri)
+        Log.d("Image", "retrieving image $imageByteArray")
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -235,26 +282,20 @@ fun ProfileScreen(
             uploadImageToFirebase(
                 imageUri = uri,
                 userId = userData?.userId ?: "",
+                context = context,
                 updateProfilePicture = { imageUrl ->
+                    imageUri = imageUrl
                     updateProfilePicture(imageUrl)
                 },
-                onUploadSuccess = { imageUrl ->
-                    // Handle upload success
+                onUploadSuccess = {
                     Toast.makeText(context, "Upload successful", Toast.LENGTH_SHORT).show()
-                    // Call retrieveImageFromFirebase from within a coroutine scope
-                    CoroutineScope(Dispatchers.IO).launch {
-                        val imageBytes = retrieveImageFromFirebase(imageUrl)
-                        // Handle the image bytes here
-                    }
+                },
+                onUploadFailure = {
+                    Toast.makeText(context, "Upload failed", Toast.LENGTH_SHORT).show()
                 }
-            ) {
-                // Handle upload failure
-                Toast.makeText(context, "Upload failed", Toast.LENGTH_SHORT).show()
-            }
+            )
         }
     }
-
-
 
     Column(
         modifier = Modifier
@@ -264,22 +305,43 @@ fun ProfileScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-
-        if (userData?.profilePictureUrl != null) {
+        if (imageByteArray != null) {
             AsyncImage(
 
-                model = imageUri?:"",
+                model = imageByteArray ?: "",
                 contentDescription = "Profile picture",
                 modifier = Modifier
                     .size(150.dp)
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
-            LaunchedEffect(Unit) {
-                retrieveImageFromFirebase(imageUri)
+        } else {
+            if (userData?.profilePictureUrl != null) {
+                AsyncImage(
+
+                    model = imageUri ?: "",
+                    contentDescription = "Profile picture",
+                    modifier = Modifier
+                        .size(150.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            if (userData?.profilePictureUrl != null) {
+//        AsyncImage(
+//
+//            model = imageUri ?: "",
+//            contentDescription = "Profile picture",
+//            modifier = Modifier
+//                .size(150.dp)
+//                .clip(CircleShape),
+//            contentScale = ContentScale.Crop
+//        )
+//
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
+
         if (userData?.username != null) {
             Text(
                 text = userData.username,
@@ -313,43 +375,8 @@ fun ProfileScreen(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
         )
     }
-
 }
 
-
-fun uploadImageToFirebase(
-    imageUri: Uri,
-    userId: String,
-    updateProfilePicture: (String) -> Unit,
-    onUploadSuccess: (Any?) -> Unit,
-    onUploadFailure: () -> Unit ) {
-    val storageRef = FirebaseStorage.getInstance().reference.child("profileImages/$userId.jpg")
-    storageRef.putFile(imageUri).addOnSuccessListener {
-        storageRef.downloadUrl.addOnSuccessListener { uri ->
-            val imageUrl = uri.toString()
-            updateProfilePicture(imageUrl)
-//            Toast.makeText(Context,"Upload succesfully",Toast.LENGTH_SHORT).show()
-
-        }
-    }
-
-}
-
-suspend fun retrieveImageFromFirebase(imageUrl: Any?): ByteArray? {
-    return withContext(Dispatchers.IO) {
-        try {
-            val storage = FirebaseStorage.getInstance()
-            val imageRef = storage.getReferenceFromUrl(imageUrl.toString())
-            val localFile = File.createTempFile("temp_image", "jpg")
-            imageRef.getFile(localFile).await()
-
-            localFile.readBytes()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-}
 
 //@Preview
 //@Composable
