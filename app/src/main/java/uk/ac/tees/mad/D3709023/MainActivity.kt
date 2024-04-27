@@ -1,6 +1,6 @@
 package uk.ac.tees.mad.D3709023
 
-import android.net.Uri
+import android.app.Activity
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,16 +37,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-//import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.activity
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -55,6 +58,7 @@ import coil.compose.rememberImagePainter
 import com.google.android.gms.auth.api.identity.Identity
 import kotlinx.coroutines.launch
 import uk.ac.tees.mad.D3709023.profile.ProfileScreen
+import uk.ac.tees.mad.D3709023.profile.getUserLocation
 import uk.ac.tees.mad.D3709023.sign_in.GoogleAuthUIClient
 import uk.ac.tees.mad.D3709023.sign_in.SignInScreen
 import uk.ac.tees.mad.D3709023.sign_in.SignInViewModel
@@ -103,7 +107,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
-                    ) {PaddingValues->
+                    ) { PaddingValues ->
                         Column(modifier = Modifier.padding(top = 56.dp)) {
                             NavHost(
                                 navController = navController,
@@ -168,6 +172,8 @@ class MainActivity : ComponentActivity() {
 
                                 composable("profile") {
                                     // Profile display logic
+                                    val activity = LocalContext.current as Activity
+                                    val userLocation = getUserLocation(activity)
                                     ProfileScreen(
 
                                         userData = googleAuthUIClient.getSignedInUser(),
@@ -175,7 +181,7 @@ class MainActivity : ComponentActivity() {
                                             lifecycleScope.launch {
                                                 googleAuthUIClient.signOut()
                                                 Toast.makeText(
-                                                    applicationContext,
+                                                    activity,
                                                     "Signed Out",
                                                     Toast.LENGTH_LONG
                                                 ).show()
@@ -184,7 +190,9 @@ class MainActivity : ComponentActivity() {
                                                 navController.navigate("sign_in")
                                             }
                                         }, updateProfilePicture = {},
-                                        PaddingValues
+                                        paddingValues = PaddingValues,
+                                        userLocation = userLocation,
+                                        context = activity
                                     )
                                 }
                                 composable("music_display") {
@@ -270,7 +278,6 @@ fun MusicDisplayScreen(musicViewModel: MusicViewModel) {
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
