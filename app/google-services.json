@@ -7,12 +7,33 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:332659691694:android:9b5269eda66e7bdebe9d3f",
+        "mobilesdk_app_id": "1:332659691694:android:700154e319650256be9d3f",
         "android_client_info": {
           "package_name": "uk.ac.tees.mad.D3709023"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "332659691694-0vbhq0dbs80m0dg4ovldfpdrvb76grpu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "uk.ac.tees.mad.D3709023",
+            "certificate_hash": "50142d843a625db3db251955a702b560ad8b2392"
+          }
+        },
+        {
+          "client_id": "332659691694-3fkn6jufi3iij3vcfs03gk9nhcdu6klr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "uk.ac.tees.mad.D3709023",
+            "certificate_hash": "9b1cb6201d8e81475b56cacda007eda022f0754b"
+          }
+        },
+        {
+          "client_id": "332659691694-da2shfpsgcvgl1p15su796djl5s38vbs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBQnIa240pHRK6WuI9VK5FRki6-RH1PPTE"
@@ -20,7 +41,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "332659691694-da2shfpsgcvgl1p15su796djl5s38vbs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

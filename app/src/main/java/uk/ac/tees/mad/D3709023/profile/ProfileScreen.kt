@@ -12,6 +12,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +22,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,22 +45,25 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
-import uk.ac.tees.mad.D3709023.sign_in.UserData
-import java.io.IOException
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import java.io.File
+import uk.ac.tees.mad.D3709023.sign_in.UserData
+import java.io.IOException
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 
 /**
@@ -218,7 +224,7 @@ fun saveUserLocation(context: Context, userLocation: LatandLong) {
 fun uploadImageToFirebase(
     imageUri: Uri,
     userId: String,
-    updateProfilePicture: (String) -> Unit,
+    updateProfilePicture: () -> Unit,
     context: Context,
     onUploadSuccess: (Any?) -> Unit,
     onUploadFailure: () -> Unit
@@ -227,7 +233,16 @@ fun uploadImageToFirebase(
     storageRef.putFile(imageUri).addOnSuccessListener { uploadTask ->
         storageRef.downloadUrl.addOnSuccessListener { uri ->
             val imageUrl = uri.toString()
-            updateProfilePicture(imageUrl)
+            val userMap = mapOf(
+                "image" to imageUrl
+            )
+            Firebase.firestore.collection("users").document(Firebase.auth.currentUser?.uid!!)
+                .set(userMap)
+                .addOnSuccessListener {
+                    updateProfilePicture()
+                }.addOnFailureListener {
+                    onUploadFailure()
+                }
         }
     }.addOnFailureListener {
         Toast.makeText(context, "Upload failed", Toast.LENGTH_SHORT).show()
@@ -235,16 +250,15 @@ fun uploadImageToFirebase(
 
 }
 
-suspend fun retrieveImageFromFirebase(imageUrl: Any?): String? {
+suspend fun retrieveImageFromFirebase(): String? {
     return withContext(Dispatchers.IO) {
         try {
-            val storage = FirebaseStorage.getInstance()
-            val imageRef = storage.getReferenceFromUrl(imageUrl.toString())
-            val localFile = File.createTempFile("temp_image", "jpg")
-            imageRef.getFile(localFile).await()
-            localFile.readBytes()
-            imageRef.downloadUrl.await().toString()
-
+            val snapshot =
+                Firebase.firestore.collection("users").document(Firebase.auth.currentUser?.uid!!)
+                    .get().await()
+            val data = snapshot.data
+            val image = data?.get("image") as String? ?: ""
+            image
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -265,13 +279,8 @@ fun ProfileScreen(
         mutableStateOf(userData?.profilePictureUrl)
     }
 
-    var imageByteArray by rememberSaveable {
-        mutableStateOf<ByteArray?>(null)
-    }
-    LaunchedEffect(Unit) {
-//        imageByteArray = retrieveImageFromFirebase(imageUri)
-        imageUri = retrieveImageFromFirebase(imageUri)
-        Log.d("Image", "retrieving image $imageByteArray")
+    LaunchedEffect(true) {
+        imageUri = retrieveImageFromFirebase()
     }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -283,9 +292,8 @@ fun ProfileScreen(
                 imageUri = uri,
                 userId = userData?.userId ?: "",
                 context = context,
-                updateProfilePicture = { imageUrl ->
-                    imageUri = imageUrl
-                    updateProfilePicture(imageUrl)
+                updateProfilePicture = {
+
                 },
                 onUploadSuccess = {
                     Toast.makeText(context, "Upload successful", Toast.LENGTH_SHORT).show()
@@ -305,10 +313,12 @@ fun ProfileScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        if (imageByteArray != null) {
+        if (imageUri != null) {
             AsyncImage(
-
-                model = imageByteArray ?: "",
+                model = ImageRequest
+                    .Builder(context).data(imageUri)
+                    .crossfade(true)
+                    .build(),
                 contentDescription = "Profile picture",
                 modifier = Modifier
                     .size(150.dp)
@@ -316,30 +326,12 @@ fun ProfileScreen(
                 contentScale = ContentScale.Crop
             )
         } else {
-            if (userData?.profilePictureUrl != null) {
-                AsyncImage(
-
-                    model = imageUri ?: "",
-                    contentDescription = "Profile picture",
-                    modifier = Modifier
-                        .size(150.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-            }
-            if (userData?.profilePictureUrl != null) {
-//        AsyncImage(
-//
-//            model = imageUri ?: "",
-//            contentDescription = "Profile picture",
-//            modifier = Modifier
-//                .size(150.dp)
-//                .clip(CircleShape),
-//            contentScale = ContentScale.Crop
-//        )
-//
-                Spacer(modifier = Modifier.height(16.dp))
-            }
+            Image(
+                imageVector = Icons.Default.Person, contentDescription = null, modifier = Modifier
+                    .size(150.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
         }
 
         if (userData?.username != null) {
@@ -376,21 +368,3 @@ fun ProfileScreen(
         )
     }
 }
-
-
-//@Preview
-//@Composable
-//fun ProfileScreenPreview() {
-//    val userData = UserData(username = "Your Name", profilePictureUrl = null, userId = "12345")
-//    val paddingValues = PaddingValues(16.dp) // Sample padding values
-//    val userLocation = LatandLong(latitude = 0.0, longitude = 0.0)
-//
-//    ProfileScreen(
-//        userData = userData,
-//        onSignOut = {},
-//        updateProfilePicture = {},
-//        paddingValues = paddingValues,
-//        userLocation = userLocation,
-//        context = Context
-//    )
-//}
